@@ -17,15 +17,15 @@ def load_results():
         try:
             df = pd.read_csv(filepath)
             results[val] = df
-            print(f"✓ 加载 enhance={val}: {len(df)} 对神经元")
+            print(f"Loaded enhance={val}: {len(df)} neuron pairs")
         except FileNotFoundError:
-            print(f"✗ 文件不存在: {filepath}")
+            print(f"File not found: {filepath}")
     return results
 
 
 def compute_correlation_matrix(results):
     print("\n" + "="*60)
-    print("1. Synergy 值相关系数矩阵 (Pearson)")
+    print("1. Synergy correlation matrix (Pearson)")
     print("="*60)
 
     synergy_series = {}
@@ -45,7 +45,7 @@ def compute_correlation_matrix(results):
 
 
     print("\n" + "="*60)
-    print("2. Synergy 值排序相关系数 (Spearman)")
+    print("2. Synergy rank correlations (Spearman)")
     print("="*60)
 
     spearman_matrix = pd.DataFrame(index=vals, columns=vals, dtype=float)
@@ -61,13 +61,13 @@ def compute_correlation_matrix(results):
 
 def compute_classification_consistency(results):
     print("\n" + "="*60)
-    print("3. 分类一致性分析 (协同/抑制)")
+    print("3. Classification consistency (synergy/suppression)")
     print("="*60)
 
     vals = sorted(results.keys())
     n_pairs = len(results[vals[0]])
 
-    print(f"总神经元对数: {n_pairs}")
+    print(f"Total neuron pairs: {n_pairs}")
 
 
     merged = results[vals[0]][['layer_A', 'neuron_A', 'layer_B', 'neuron_B', 'relationship']].copy()
@@ -87,26 +87,26 @@ def compute_classification_consistency(results):
             consistent = (merged[col1] == merged[col2]).sum()
             consistency_matrix.loc[v1, v2] = consistent / n_pairs * 100
 
-    print("\n分类一致率 (%):")
+    print("\nClassification agreement (%):")
     print(consistency_matrix.to_string(float_format="{:.1f}".format))
 
 
-    print("\n各增强倍数的分类分布:")
+    print("\nClass distribution at each enhancement strength:")
     for val in vals:
         col = f'rel_{val}'
         synergistic = (merged[col] == 'synergistic').sum()
         suppressive = (merged[col] == 'suppressive').sum()
         independent = (merged[col] == 'independent').sum()
-        print(f"  enhance={val}: 协同={synergistic} ({synergistic/n_pairs*100:.1f}%), "
-              f"抑制={suppressive} ({suppressive/n_pairs*100:.1f}%), "
-              f"独立={independent} ({independent/n_pairs*100:.1f}%)")
+        print(f"  enhance={val}: Synergistic={synergistic} ({synergistic/n_pairs*100:.1f}%), "
+              f"Suppressive={suppressive} ({suppressive/n_pairs*100:.1f}%), "
+              f"Independent={independent} ({independent/n_pairs*100:.1f}%)")
 
     return merged, consistency_matrix
 
 
 def find_stable_pairs_all(merged, vals, results):
     print("\n" + "="*60)
-    print("4. 稳定神经元对分析 (在所有增强倍数下分类一致)")
+    print("4. Stable neuron pairs (consistent classes across all enhancement strengths)")
     print("="*60)
 
     rel_cols = [f'rel_{v}' for v in vals]
@@ -117,13 +117,13 @@ def find_stable_pairs_all(merged, vals, results):
     stable_pairs = merged[merged['all_consistent']].copy()
     unstable_pairs = merged[~merged['all_consistent']].copy()
 
-    print(f"稳定神经元对: {len(stable_pairs)} ({len(stable_pairs)/len(merged)*100:.1f}%)")
-    print(f"不稳定神经元对: {len(unstable_pairs)} ({len(unstable_pairs)/len(merged)*100:.1f}%)")
+    print(f"Stable neuron pairs: {len(stable_pairs)} ({len(stable_pairs)/len(merged)*100:.1f}%)")
+    print(f"Unstable neuron pairs: {len(unstable_pairs)} ({len(unstable_pairs)/len(merged)*100:.1f}%)")
 
     if len(stable_pairs) > 0:
 
         stable_rel = stable_pairs[f'rel_{vals[0]}'].value_counts()
-        print(f"\n稳定神经元对的分类分布:")
+        print(f"\nClass distribution of stable neuron pairs:")
         for rel, count in stable_rel.items():
             print(f"  {rel}: {count} ({count/len(stable_pairs)*100:.1f}%)")
 
@@ -147,7 +147,7 @@ def find_stable_pairs_all(merged, vals, results):
         stable_suppressive = stable_pairs[stable_pairs[f'rel_{vals[0]}'] == 'suppressive'].sort_values('synergy_mean', ascending=True)
 
         print(f"\n" + "="*60)
-        print("稳定的协同神经元对 (Top 20)")
+        print("Stable synergistic neuron pairs (Top 20)")
         print("="*60)
         if len(stable_synergistic) > 0:
             top_stable_syn = stable_synergistic.head(20)
@@ -155,10 +155,10 @@ def find_stable_pairs_all(merged, vals, results):
             for _, row in top_stable_syn.iterrows():
                 print(f"{row['layer_A']:>10} {row['neuron_A']:>10} {row['layer_B']:>10} {row['neuron_B']:>10} {row['synergy_mean']:>12.8f} {row['synergy_std']:>12.8f}")
         else:
-            print("无")
+            print("None")
 
         print(f"\n" + "="*60)
-        print("稳定的抑制神经元对 (Top 20)")
+        print("Stable suppressive neuron pairs (Top 20)")
         print("="*60)
         if len(stable_suppressive) > 0:
             top_stable_sup = stable_suppressive.head(20)
@@ -166,7 +166,7 @@ def find_stable_pairs_all(merged, vals, results):
             for _, row in top_stable_sup.iterrows():
                 print(f"{row['layer_A']:>10} {row['neuron_A']:>10} {row['layer_B']:>10} {row['neuron_B']:>10} {row['synergy_mean']:>12.8f} {row['synergy_std']:>12.8f}")
         else:
-            print("无")
+            print("None")
 
 
         save_path = f"{RESULTS_DIR}stable_neuron_pairs_all_enhance.csv"
@@ -174,14 +174,14 @@ def find_stable_pairs_all(merged, vals, results):
                                             f'rel_{vals[0]}', 'synergy_mean', 'synergy_std'] + synergy_cols]
         stable_pairs_output = stable_pairs_output.rename(columns={f'rel_{vals[0]}': 'relationship'})
         stable_pairs_output.to_csv(save_path, index=False)
-        print(f"\n稳定神经元对已保存到: {save_path}")
+        print(f"\nStable neuron pairs saved to: {save_path}")
 
     return stable_pairs, unstable_pairs
 
 
 def find_stable_pairs(merged, vals, threshold=90):
     print("\n" + "="*60)
-    print(f"4. 稳定神经元对分析 (一致率 >= {threshold}%)")
+    print(f"4. Stable neuron pairs (agreement >= {threshold}%)")
     print("="*60)
 
 
@@ -191,12 +191,12 @@ def find_stable_pairs(merged, vals, threshold=90):
     stable_pairs = merged[merged['all_consistent']]
     unstable_pairs = merged[~merged['all_consistent']]
 
-    print(f"稳定神经元对: {len(stable_pairs)} ({len(stable_pairs)/len(merged)*100:.1f}%)")
-    print(f"不稳定神经元对: {len(unstable_pairs)} ({len(unstable_pairs)/len(merged)*100:.1f}%)")
+    print(f"Stable neuron pairs: {len(stable_pairs)} ({len(stable_pairs)/len(merged)*100:.1f}%)")
+    print(f"Unstable neuron pairs: {len(unstable_pairs)} ({len(unstable_pairs)/len(merged)*100:.1f}%)")
 
 
     if len(unstable_pairs) > 0:
-        print(f"\n不稳定对的分类分布示例:")
+        print(f"\nExample class distribution of unstable pairs:")
         sample = unstable_pairs.head(5)
         for _, row in sample.iterrows():
             rels = [row[f'rel_{v}'] for v in vals]
@@ -208,13 +208,13 @@ def find_stable_pairs(merged, vals, threshold=90):
 
 def analyze_top_pairs(results):
     print("\n" + "="*60)
-    print("5. Top 10 协同/抑制对的稳定性")
+    print("5. Stability of the top 10 synergistic/suppressive pairs")
     print("="*60)
 
     vals = sorted(results.keys())
 
 
-    print("\n各增强倍数Top 10协同对:")
+    print("\nTop 10 synergistic pairs at each enhancement strength:")
     for val in vals:
         df = results[val]
         top10 = df.nlargest(10, 'synergy')
@@ -224,7 +224,7 @@ def analyze_top_pairs(results):
             print(f"    {i}. {pair} synergy={row['synergy']:.6f}")
 
 
-    print("\n各增强倍数Top 10协同对的交集:")
+    print("\nOverlap of the top 10 synergistic pairs across enhancement strengths:")
     top_sets = {}
     for val in vals:
         df = results[val]
@@ -238,19 +238,19 @@ def analyze_top_pairs(results):
         for v2 in vals:
             if v1 < v2:
                 intersection = top_sets[v1] & top_sets[v2]
-                print(f"  enhance={v1} ∩ enhance={v2}: {len(intersection)} 对共同出现在Top 10")
+                print(f"  enhance={v1} ∩ enhance={v2}: {len(intersection)} pairs appear in both top-10 lists")
 
 
 def main():
     print("="*60)
-    print("敏感性分析结果对比")
+    print("Sensitivity analysis comparison")
     print("="*60)
 
 
     results = load_results()
 
     if len(results) < 2:
-        print("需要至少2个结果文件才能进行对比分析")
+        print("At least two result files are required for comparison")
         return
 
     vals = sorted(results.keys())
@@ -269,7 +269,7 @@ def main():
 
 
     print("\n" + "="*60)
-    print("总结")
+    print("Summary")
     print("="*60)
 
     vals = sorted(results.keys())
@@ -279,11 +279,11 @@ def main():
             v1, v2 = vals[i], vals[j]
             corr, _ = stats.spearmanr(results[v1]['synergy'], results[v2]['synergy'])
             avg_spearman.append((v1, v2, corr))
-            print(f"Spearman相关系数 ({v1}x vs {v2}x): {corr:.4f}")
+            print(f"Spearman correlation ({v1}x vs {v2}x): {corr:.4f}")
 
     if avg_spearman:
         avg_corr = np.mean([c[2] for c in avg_spearman])
-        print(f"\n平均Spearman相关系数: {avg_corr:.4f}")
+        print(f"\nMean Spearman correlation: {avg_corr:.4f}")
 
 
 if __name__ == '__main__':

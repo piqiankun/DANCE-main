@@ -129,17 +129,17 @@ def get_last_token_activations(kn, sentence: str, neurons: list):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="获取bn_sentence最后一个token的神经元激活值")
+    parser = argparse.ArgumentParser(description="Extract neuron activations for the last token of bn_sentence")
     parser.add_argument("--model", "--model_name", type=str, default="meta-llama/Llama-3.1-8B-Instruct",
-                        help="模型名称")
+                        help="Model name")
     parser.add_argument("--input_file", type=str, default=DATA_FILE,
-                        help="输入JSONL文件路径")
+                        help="Input JSONL file path")
     parser.add_argument("--output_file", type=str, default=None,
-                        help="输出JSONL文件路径（默认在输入文件后加.activation后缀）")
+                        help="Output JSONL file path (default: input path with an .activation suffix)")
     parser.add_argument("--start", type=int, default=0,
-                        help="起始索引")
+                        help="Start index")
     parser.add_argument("--end", type=int, default=-1,
-                        help="结束索引，-1表示处理到文件末尾")
+                        help="End index; -1 processes the remaining file")
 
     args = parser.parse_args()
 
@@ -167,13 +167,13 @@ def main():
     layer_intermediate_sizes = {}
     for layer_idx, neuron_idx in neurons_to_analyze:
         if layer_idx < 0 or layer_idx >= n_layers:
-            raise ValueError(f"层索引 {layer_idx} 超出范围 [0, {n_layers - 1}]")
+            raise ValueError(f"Layer index {layer_idx} is outside the valid range [0, {n_layers - 1}]")
         if layer_idx not in layer_intermediate_sizes:
             layer_intermediate_sizes[layer_idx] = kn.intermediate_size(layer_idx)
         intermediate_size = layer_intermediate_sizes[layer_idx]
         if neuron_idx < 0 or neuron_idx >= intermediate_size:
             raise ValueError(
-                f"第 {layer_idx} 层神经元索引 {neuron_idx} 超出范围 "
+                f"Layer {layer_idx} neuron index {neuron_idx} is outside the valid range "
                 f"[0, {intermediate_size - 1}]"
             )
 
@@ -182,7 +182,7 @@ def main():
         f"Total layers: {n_layers}, Intermediate sizes: "
         f"{sorted(set(layer_intermediate_sizes.values()))}"
     )
-    print(f"指定分析的神经元数量: {len(neurons_to_analyze)}")
+    print(f"Number of neurons selected for analysis: {len(neurons_to_analyze)}")
 
 
     print(f"--- Loading Data from: {args.input_file} ---")
@@ -235,7 +235,7 @@ def main():
         for item in results:
             f.write(json.dumps(item, ensure_ascii=False) + "\n")
 
-    print(f"\n✅ 处理完成，共 {len(results)} 条，输出至: {output_file}")
+    print(f"\nProcessing complete: {len(results)} records; output: {output_file}")
 
 
 if __name__ == "__main__":

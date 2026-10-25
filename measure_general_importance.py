@@ -217,7 +217,7 @@ def run_baseline(model_name, num_probs=None, temperature=0.2, eight_bit=False, v
 def run_neuron_ablation(model_name, specified_neurons, num_probs=None, temperature=0.2, eight_bit=False, verbose=False):
     print(f"\n{'='*60}")
     print(f"Running Neuron Ablation Experiment")
-    print(f"指定神经元数量: {len(specified_neurons)}")
+    print(f"Number of selected neurons: {len(specified_neurons)}")
     print(f"{'='*60}")
 
     parquet_path = os.path.join(DATA_DIR, 'OBQA11.parquet')
@@ -235,7 +235,7 @@ def run_neuron_ablation(model_name, specified_neurons, num_probs=None, temperatu
 
     results = []
 
-    print(f"\n开始对每个神经元进行Ablation实验...")
+    print(f"\nStarting the single-neuron ablation experiments...")
 
     for i, (layer_idx, neuron_idx) in enumerate(tqdm(specified_neurons, desc="Ablating neurons")):
 
@@ -268,7 +268,7 @@ def run_neuron_ablation(model_name, specified_neurons, num_probs=None, temperatu
     results_df = results_df.sort_values('impact', ascending=False).reset_index(drop=True)
 
     print(f"\n{'='*60}")
-    print(f"Ablation Results Summary (按影响程度排序)")
+    print(f"Ablation results summary (ranked by impact)")
     print(f"{'='*60}")
     print(results_df.head(20).to_string(index=False))
 
@@ -276,21 +276,21 @@ def run_neuron_ablation(model_name, specified_neurons, num_probs=None, temperatu
 
 
 def main():
-    parser = argparse.ArgumentParser(description='OBOA神经元Ablation实验')
+    parser = argparse.ArgumentParser(description='OBQA neuron-ablation experiment')
     parser.add_argument('--model_name', type=str, default='meta-llama/Llama-3.2-3B-Instruct')
-    parser.add_argument('--num_probs', '-n', type=int, default=None, help='评估样本数量，默认为所有数据')
-    parser.add_argument('--temperature', type=float, default=0.2, help='温度参数')
-    parser.add_argument('--eight_bit', action='store_true', help='使用8bit加载模型')
-    parser.add_argument('--verbose', '-v', action='store_true', help='显示详细信息')
+    parser.add_argument('--num_probs', '-n', type=int, default=None, help='Number of evaluation examples (default: all examples)')
+    parser.add_argument('--temperature', type=float, default=0.2, help='Temperature')
+    parser.add_argument('--eight_bit', action='store_true', help='Load the model in 8-bit precision')
+    parser.add_argument('--verbose', '-v', action='store_true', help='Show detailed output')
 
     args = parser.parse_args()
 
     specified_neurons = SPECIFIED_NEURONS
 
     if not specified_neurons:
-        raise ValueError("请在脚本顶部的 SPECIFIED_NEURONS 列表中定义要测试的神经元")
+        raise ValueError("Define neurons to test in SPECIFIED_NEURONS at the top of this script")
 
-    print(f"使用预定义的神经元列表，共 {len(specified_neurons)} 个神经元")
+    print(f"Using the predefined neuron list: {len(specified_neurons)} neurons")
 
     results_df, baseline_accuracy = run_neuron_ablation(
         args.model_name,
@@ -305,10 +305,10 @@ def main():
     save_filename = f'general_importance_results_{model_short}.csv'
     save_path = os.path.join(SAVE_DIR, save_filename)
     results_df.to_csv(save_path, index=False)
-    print(f"\n结果已保存到: {save_path}")
+    print(f"\nResults saved to: {save_path}")
 
-    print(f"\n基线准确率: {baseline_accuracy:.2f}%")
-    print(f"最高影响神经元: Layer {results_df.iloc[0]['layer']}, Neuron {results_df.iloc[0]['neuron']}, Impact: {results_df.iloc[0]['impact']:.2f}%")
+    print(f"\nBaseline accuracy: {baseline_accuracy:.2f}%")
+    print(f"Neuron with the largest impact: Layer {results_df.iloc[0]['layer']}, Neuron {results_df.iloc[0]['neuron']}, Impact: {results_df.iloc[0]['impact']:.2f}%")
 
 
 if __name__ == '__main__':

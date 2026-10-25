@@ -1229,7 +1229,7 @@ class KnowledgeNeurons(KnowledgeNeuronsBase):
         if verbose:
             print(f"\n[INFO] Contrastive scores shape: {contrastive_scores.shape}")
             print(f"  Range: [{contrastive_scores.min().item():.6f}, {contrastive_scores.max().item():.6f}]")
-            print(f"  Note: 如果差值为0，说明两次前向传播的中间激活相同（这是自回归模型的正常行为）")
+            print(f"  Note: A zero difference means the intermediate activations match across both forward passes (normal for autoregressive models)")
 
         return contrastive_scores.detach()
 

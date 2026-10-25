@@ -225,24 +225,24 @@ def print_candidate_summary(community_edges, top_n=20):
 
 def main():
     parser = argparse.ArgumentParser(
-        description='基于社区发现的神经元功能模块识别'
+        description='Neuron functional-module identification through community detection'
     )
     parser.add_argument('--input', type=str,
                         default=os.path.join(DATA_DIR, 'neuron_bias_contributions.csv'),
-                        help='输入CSV文件路径')
+                        help='Input CSV file path')
     parser.add_argument('--k_neighbors', type=int, default=10,
-                        help='kNN 图的邻居数量（默认 10）')
+                        help='Number of neighbors in the kNN graph (default: 10)')
     parser.add_argument('--weight_threshold', type=float, default=0.0,
-                        help='边权阈值（默认 0.0，仅保留 w_ij > threshold 的边）')
+                        help='Edge-weight threshold (default: 0.0; retain only edges with w_ij > threshold)')
     parser.add_argument('--resolution', type=float, default=1.0,
-                        help='Louvain 分辨率参数（默认 1.0）')
+                        help='Louvain resolution (default: 1.0)')
     parser.add_argument('--random_state', type=int, default=42,
-                        help='随机种子')
+                        help='Random seed')
     parser.add_argument('--output_dir', type=str,
                         default=SAVE_DIR,
-                        help='输出目录')
+                        help='Output directory')
     parser.add_argument('--min_dcc', type=float, default=0.1,
-                        help='最小 |DCC| 阈值（默认 0.1，仅保留 |DCC| > threshold 的候选对）')
+                        help='Minimum |DCC| threshold (default: 0.1; retain candidate pairs with |DCC| > threshold)')
 
     args = parser.parse_args()
 
@@ -252,7 +252,7 @@ def main():
         model_name = 'llama3.1-8b-instruct'
 
     print("="*60)
-    print("神经元功能模块识别 (DCC + Louvain Community Detection)")
+    print("Neuron functional-module identification (DCC + Louvain community detection)")
     print("="*60)
     print(f"Input: {args.input}")
     print(f"k neighbors: {args.k_neighbors}")

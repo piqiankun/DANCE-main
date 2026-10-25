@@ -102,8 +102,8 @@ class ActivationInjector:
                     activation = activation.to(device=output.device, dtype=output.dtype)
                     if activation.numel() != output.size(0):
                         raise ValueError(
-                            f"注入值数量 {activation.numel()} 与batch大小 "
-                            f"{output.size(0)} 不一致"
+                            f"Number of injected values {activation.numel()} does not match batch size "
+                            f"{output.size(0)}"
                         )
                     output[:, :, injector.neuron_idx] = activation.reshape(-1, 1)
                 else:
@@ -157,7 +157,7 @@ def evaluate_qwen35_batch(perspectiveModel, entries):
             entry["_qwen_answer_ids"] = answer_lists
         for answer_ids in answer_lists:
             if not answer_ids:
-                raise ValueError(f"样本 {entry.get('uuid')} 包含空选项")
+                raise ValueError(f"Example {entry.get('uuid')} contains an empty option")
             rows.append(prompt_ids + answer_ids[:-1])
             row_metadata.append((sample_idx, len(prompt_ids), answer_ids))
 
@@ -202,7 +202,7 @@ def evaluate_qwen35_batch(perspectiveModel, entries):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="跨语言神经元激活注入实验")
+    parser = argparse.ArgumentParser(description="Cross-language neuron activation-replacement experiment")
     parser.add_argument("--model", "--model_name", type=str, default="meta-llama/Llama-3.2-3B-Instruct")
     parser.add_argument("--input_file", type=str, default=DATA_FILE)
     parser.add_argument("--start", type=int, default=0)
@@ -210,12 +210,12 @@ def main():
     parser.add_argument("--temperature", type=float, default=0.2)
     parser.add_argument(
         "--qwen_batch_size", type=int, default=4,
-        help="Qwen3.5每次并行处理的样本数；显存不足时设为1或2"
+        help="Qwen3.5 examples processed in parallel; use 1 or 2 when GPU memory is limited"
     )
 
     args = parser.parse_args()
     if args.qwen_batch_size <= 0:
-        parser.error("--qwen_batch_size 必须为正整数")
+        parser.error("--qwen_batch_size must be a positive integer")
 
     print(f"--- Loading Model: {args.model} ---")
     perspectiveModel = LLM_KN(
@@ -257,13 +257,13 @@ def main():
     layer_intermediate_sizes = {}
     for layer_idx, neuron_idx in SPECIFIED_NEURONS:
         if layer_idx < 0 or layer_idx >= n_layers:
-            raise ValueError(f"层索引 {layer_idx} 超出范围 [0, {n_layers - 1}]")
+            raise ValueError(f"Layer index {layer_idx} is outside the valid range [0, {n_layers - 1}]")
         if layer_idx not in layer_intermediate_sizes:
             layer_intermediate_sizes[layer_idx] = kn.intermediate_size(layer_idx)
         intermediate_size = layer_intermediate_sizes[layer_idx]
         if neuron_idx < 0 or neuron_idx >= intermediate_size:
             raise ValueError(
-                f"第 {layer_idx} 层神经元索引 {neuron_idx} 超出范围 "
+                f"Layer {layer_idx} neuron index {neuron_idx} is outside the valid range "
                 f"[0, {intermediate_size - 1}]"
             )
     print(
@@ -399,7 +399,7 @@ def main():
     print(f"{'='*60}")
     print(f"Total samples: {total}")
     print(f"Baseline correct: {baseline_correct}/{total} ({baseline_accuracy:.2f}%)")
-    print(f"\nNeuron ablation results (按impact排序):")
+    print(f"\nNeuron ablation results (ranked by impact):")
 
     neuron_results_sorted = sorted(neuron_results, key=lambda x: x["impact"], reverse=True)
 
@@ -424,7 +424,7 @@ def main():
     with open(output_file, "w", encoding="utf-8") as f:
         json.dump(output_data, f, ensure_ascii=False, indent=2)
 
-    print(f"\n✅ 处理完成，结果已保存到: {output_file}")
+    print(f"\nProcessing complete; results saved to: {output_file}")
 
 
 if __name__ == "__main__":

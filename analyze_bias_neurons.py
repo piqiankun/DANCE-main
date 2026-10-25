@@ -109,19 +109,19 @@ def know_bias_analysis_temp_all_new(model_name, condition, num_prob):
 
     if att_scores_path is None:
         raise ValueError(
-            f'未找到与模型/--add/--ans 匹配的归因分数配置: '
+            f'No attribution-score configuration matches the model/--add/--ans settings: '
             f'model={args.model_name}, add={args.add!r}, ans={args.ans}'
         )
     if not os.path.exists(att_scores_path):
-        raise FileNotFoundError(f'归因分数文件不存在: {att_scores_path}')
+        raise FileNotFoundError(f'Attribution-score file not found: {att_scores_path}')
 
     print(f'[OK] Loading attribution scores: {att_scores_path}')
     att_scores_all = np.load(att_scores_path, allow_pickle=True)
     if len(att_scores_all) == 0:
-        raise ValueError(f'归因分数文件为空: {att_scores_path}')
+        raise ValueError(f'Attribution-score file is empty: {att_scores_path}')
     if len(att_scores_all) < len(_df):
         raise ValueError(
-            f'归因分数数量 {len(att_scores_all)} 少于数据行数 {len(_df)}: '
+            f'Attribution-score count {len(att_scores_all)} is smaller than the data row count {len(_df)}: '
             f'{att_scores_path}'
         )
 
@@ -162,7 +162,7 @@ def know_bias_analysis_temp_all_new(model_name, condition, num_prob):
 
 
         if att_scores_tensor.size(0) == 0:
-            print("跳过空知识神经元组")
+            print("Skipping an empty knowledge-neuron group")
             continue
         att_score = att_scores_tensor[idx]
         att_scores.append(att_score)

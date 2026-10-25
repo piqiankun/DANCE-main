@@ -375,7 +375,7 @@ Question: {question}"""
 
 
     print("\n" + "="*60)
-    print("Synergy 值分布统计")
+    print("Synergy distribution statistics")
     print("="*60)
     print(f"  Min:  {results_df['synergy'].min():.6f}")
     print(f"  Max:  {results_df['synergy'].max():.6f}")
@@ -384,29 +384,29 @@ Question: {question}"""
     print(f"  Median: {results_df['synergy'].median():.6f}")
 
     print("\n" + "="*60)
-    print("成对神经元协同/抑制分析结果统计")
+    print("Pairwise neuron synergy/suppression analysis summary")
     print("="*60)
-    print(f"总神经元对数: {len(results_df)}")
-    print(f"协同 (Synergistic): {synergistic_count} ({synergistic_count/len(results_df)*100:.1f}%)")
-    print(f"抑制 (Suppressive): {suppressive_count} ({suppressive_count/len(results_df)*100:.1f}%)")
+    print(f"Total neuron pairs: {len(results_df)}")
+    print(f"Synergistic: {synergistic_count} ({synergistic_count/len(results_df)*100:.1f}%)")
+    print(f"Suppressive: {suppressive_count} ({suppressive_count/len(results_df)*100:.1f}%)")
 
 
     save_filename = f'pairwise_neuron_synergy_{model_name_clean}_enhance_{enhance_value}.csv'
     save_path = os.path.join(save_dir, save_filename)
     results_df.to_csv(save_path, index=False)
-    print(f"\n结果已保存到: {save_path}")
+    print(f"\nResults saved to: {save_path}")
 
 
     if synergistic_count > 0:
         print("\n" + "="*60)
-        print("协同效应最强的神经元对 (Top 10)")
+        print("Neuron pairs with the strongest synergy (Top 10)")
         print("="*60)
         top_synergistic = results_df[results_df['relationship'] == 'synergistic'].nlargest(10, 'synergy')
         print(top_synergistic[['layer_A', 'neuron_A', 'layer_B', 'neuron_B', 'synergy', 'relationship']].to_string(index=False))
 
     if suppressive_count > 0:
         print("\n" + "="*60)
-        print("抑制效应最强的神经元对 (Top 10)")
+        print("Neuron pairs with the strongest suppression (Top 10)")
         print("="*60)
         top_suppressive = results_df[results_df['relationship'] == 'suppressive'].nsmallest(10, 'synergy')
         print(top_suppressive[['layer_A', 'neuron_A', 'layer_B', 'neuron_B', 'synergy', 'relationship']].to_string(index=False))
@@ -415,11 +415,11 @@ Question: {question}"""
 
 
 def main():
-    parser = argparse.ArgumentParser(description='成对神经元协同/抑制分析')
+    parser = argparse.ArgumentParser(description='Pairwise neuron synergy/suppression analysis')
     parser.add_argument('--condition', type=str, default='Gender_identity')
     parser.add_argument('--model_name', type=str, default='meta-llama/Llama-3.2-3B-Instruct')
-    parser.add_argument('--num_samples', '-n', type=int, default=1, help='每个神经元对分析的样本数量')
-    parser.add_argument('--enhance_value', '-e', type=float, default=2.0, help='神经元增强倍数')
+    parser.add_argument('--num_samples', '-n', type=int, default=1, help='Number of samples to analyze per neuron pair')
+    parser.add_argument('--enhance_value', '-e', type=float, default=2.0, help='Neuron enhancement multiplier')
     parser.add_argument('--verbose', '-v', action='store_true')
     parser.add_argument('--add', type=str, default='')
     parser.add_argument('--start', type=int, default=0)

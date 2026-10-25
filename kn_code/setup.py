@@ -30,7 +30,6 @@ def _install_set_submodule_compat():
 
 
 CACHE_DIR = os.getenv('HF_HOME', '.cache/huggingface')
-print(f"Current Working Directory: {os.getcwd()}")
 
 
 bnb_config = BitsAndBytesConfig(
@@ -55,14 +54,13 @@ def initialize_model_and_tokenizer(
         device_map=None,
 ):
     local_files_only = os.path.isdir(model_path)
-    model_source = os.path.abspath(model_path) if local_files_only else model_path
-    print(f"-> 正在加载模型: {model_source}")
+    print("-> Loading model...")
     if use_quantization:
-        print("🔥 启用 [4bit量化] 加载模式...")
+        print("Loading with 4-bit quantization...")
     elif device_map in ("auto", "balanced", "balanced_low_0", "sequential"):
-        print("🔥 启用 [多卡模型并行] 加载模式 (无量化)...")
+        print("Loading with multi-GPU model parallelism (without quantization)...")
     else:
-        print("🔥 强制启用 [单卡] 加载模式 (无量化)...")
+        print("Loading on a single GPU (without quantization)...")
 
 
 
@@ -96,15 +94,15 @@ def initialize_model_and_tokenizer(
 
 
     if is_bert:
-        print("检测到 BERT 架构...")
+        print("Detected BERT architecture...")
         tokenizer = BertTokenizer.from_pretrained(model_path, local_files_only=local_files_only)
         model = BertLMHeadModel.from_pretrained(**common_kwargs)
     elif is_gpt2:
-        print("检测到 GPT-2 架构...")
+        print("Detected GPT-2 architecture...")
         tokenizer = GPT2Tokenizer.from_pretrained(model_path, local_files_only=local_files_only)
         model = GPT2LMHeadModel.from_pretrained(**common_kwargs)
     elif is_causal_lm:
-        print("检测到 Causal LM 架构 (Llama/Qwen/Gemma/Ministral)...")
+        print("Detected causal LM architecture (Llama/Qwen/Gemma/Ministral)...")
         tokenizer = AutoTokenizer.from_pretrained(
             model_path,
             rope_scaling=None,
@@ -115,13 +113,13 @@ def initialize_model_and_tokenizer(
 
         config_model_type = getattr(config, "model_type", "").lower()
         if config_model_type == "qwen3_5":
-            print("检测到 Qwen3.5 多模态架构，加载纯文本 causal LM...")
+            print("Detected Qwen3.5 multimodal architecture; loading the text-only causal LM...")
             model = AutoModelForCausalLM.from_pretrained(**common_kwargs)
 
         elif config_model_type == "qwen3_5_moe":
             raise NotImplementedError(
-                "Qwen3.5-MoE 的专家层不能直接使用 dense 模型的 (layer, neuron) 坐标；"
-                "请先为 expert 路由定义神经元坐标。"
+                "Qwen3.5-MoE expert layers cannot directly use dense-model (layer, neuron) coordinates; "
+                "define neuron coordinates for expert routing first."
             )
 
 
@@ -129,7 +127,7 @@ def initialize_model_and_tokenizer(
 
 
 
-            print("检测到 Ministral3 多模态架构，加载官方完整模型并启用文本模式...")
+            print("Detected Ministral3 multimodal architecture; loading the official full model in text mode...")
             _install_set_submodule_compat()
             ministral_kwargs = common_kwargs.copy()
 
@@ -144,7 +142,7 @@ def initialize_model_and_tokenizer(
             model = full_model
 
         elif False and isinstance(config, Mistral3Config):
-            print("检测到 Ministral3 多模态架构，手动加载并重映射权重...")
+            print("Detected Ministral3 multimodal architecture; loading and remapping weights manually...")
 
 
             from safetensors.torch import load_file
@@ -154,7 +152,7 @@ def initialize_model_and_tokenizer(
             if not weight_files:
                 weight_files = [f for f in os.listdir(model_path) if f.endswith('.bin')]
 
-            print(f"找到权重文件: {weight_files}")
+            print(f"Weight files found: {weight_files}")
 
 
             full_state_dict = {}
@@ -166,11 +164,11 @@ def initialize_model_and_tokenizer(
                     sd = torch.load(wf_path, map_location='cpu')
                 full_state_dict.update(sd)
 
-            print(f"共加载 {len(full_state_dict)} 个权重")
+            print(f"Loaded {len(full_state_dict)} weights")
 
 
             sample_keys = list(full_state_dict.keys())[:5]
-            print("原始权重key示例:")
+            print("Example original weight keys:")
             for k in sample_keys:
                 print(f"  {k}")
 
@@ -198,8 +196,8 @@ def initialize_model_and_tokenizer(
                 else:
                     new_state_dict[key] = value
 
-            print(f"重映射了 {remapped_count} 个权重key")
-            print("重映射后的key示例:")
+            print(f"Remapped {remapped_count} weight keys")
+            print("Example remapped weight keys:")
             for i, k in enumerate(list(new_state_dict.keys())[:5]):
                 print(f"  {k}")
 
@@ -240,18 +238,18 @@ def initialize_model_and_tokenizer(
             set_attr(config, 'rope_parameters', {'rope_type': 'default'})
             set_attr(config, 'tie_word_embeddings', False)
 
-            print(f"Config设置: vocab_size={config.vocab_size}, hidden_size={config.hidden_size}")
+            print(f"Configuration: vocab_size={config.vocab_size}, hidden_size={config.hidden_size}")
 
-            print("使用config创建模型...")
+            print("Creating the model from its configuration...")
             full_model = Ministral3ForCausalLM(config)
-            print(f"模型结构创建成功: {type(full_model).__name__}")
+            print(f"Model architecture created: {type(full_model).__name__}")
 
-            print(f"模型结构创建成功: {type(full_model).__name__}")
+            print(f"Model architecture created: {type(full_model).__name__}")
 
 
 
             if hasattr(full_model, 'lm_head') and hasattr(full_model.model, 'embed_tokens'):
-                print("解开 lm_head 和 embed_tokens 的绑定...")
+                print("Untying lm_head and embed_tokens...")
 
                 embed_tokens_weight = full_model.model.embed_tokens.weight
 
@@ -259,19 +257,19 @@ def initialize_model_and_tokenizer(
 
 
             missing, unexpected = full_model.load_state_dict(new_state_dict, strict=False)
-            print(f"权重加载结果: missing={len(missing)}, unexpected={len(unexpected)}")
+            print(f"Weight-loading results: missing={len(missing)}, unexpected={len(unexpected)}")
 
 
             if 'lm_head.weight' in missing:
-                print("lm_head.weight 缺失，从 embed_tokens 复制...")
+                print("lm_head.weight is missing; copying from embed_tokens...")
                 full_model.lm_head.weight = torch.nn.Parameter(full_model.model.embed_tokens.weight.clone().detach())
 
             if missing:
-                print("MISSING 权重 (未能加载):")
+                print("MISSING weights (not loaded):")
                 for m in missing[:5]:
                     print(f"  {m}")
                 if len(missing) > 5:
-                    print(f"  ... 共 {len(missing)} 个")
+                    print(f"  ... Total: {len(missing)} items")
 
 
             embed_weight = full_model.model.embed_tokens.weight
@@ -282,7 +280,7 @@ def initialize_model_and_tokenizer(
             embed_std = embed_weight.std().item()
             is_embed_random = abs(embed_mean) < 0.01 and embed_std < 0.1
 
-            print(f"embed_tokens: mean={embed_mean:.6f}, std={embed_std:.6f}, 看起来{'随机' if is_embed_random else '已加载'}")
+            print(f"embed_tokens: mean={embed_mean:.6f}, std={embed_std:.6f}, status={'random' if is_embed_random else 'loaded'}")
             print(f"lm_head: mean={lm_head_weight.mean().item():.6f}, std={lm_head_weight.std().item():.6f}")
 
 
@@ -296,21 +294,21 @@ def initialize_model_and_tokenizer(
             has_lm_head = hasattr(full_model, 'lm_head') and full_model.lm_head.weight.numel() > 0
             has_layers = hasattr(full_model.model, 'layers') and len(full_model.model.layers) > 0
 
-            print(f"组件检查: embed_tokens={'OK' if has_embed else 'EMPTY'}, lm_head={'OK' if has_lm_head else 'EMPTY'}, layers={'OK' if has_layers else 'EMPTY'}")
+            print(f"Component checks: embed_tokens={'OK' if has_embed else 'EMPTY'}, lm_head={'OK' if has_lm_head else 'EMPTY'}, layers={'OK' if has_layers else 'EMPTY'}")
 
 
-            print("✅ 使用 full_model (Ministral3ForCausalLM)")
+            print("Using full_model (Ministral3ForCausalLM)")
             model = full_model
 
         elif isinstance(config, Gemma3Config):
-            print("检测到 Gemma3 架构，使用专用类加载...")
+            print("Detected Gemma3 architecture; loading with the dedicated model class...")
             model_kwargs = common_kwargs.copy()
             model_kwargs["trust_remote_code"] = True
             model = Gemma3ForCausalLM.from_pretrained(**model_kwargs)
         else:
             model = AutoModelForCausalLM.from_pretrained(**common_kwargs)
     else:
-        raise ValueError(f"无法识别模型架构: {model_path}")
+        raise ValueError("Unrecognized model architecture; check the model configuration")
 
 
 
@@ -362,7 +360,7 @@ def load_model(
         use_quantization: bool = False,
         device_map=None,
 ):
-    print(f"开始加载模型: {model_path}")
+    print("Loading model...")
     model, tokenizer = initialize_model_and_tokenizer(
         model_path,
         use_quantization=use_quantization,
@@ -378,5 +376,5 @@ def load_model(
             kn.tokenizer.pad_token = kn.tokenizer.eos_token
             print("Set pad_token to eos_token.")
 
-    print("模型加载完成！")
+    print("Model loading complete.")
     return kn

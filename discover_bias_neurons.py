@@ -406,18 +406,18 @@ def know_bias_analysis_contrastive(model_name, condition, num_prob):
 
 
     print('\n' + '='*60)
-    print('激活值差值统计信息（用于确定阈值）')
+    print('Activation-difference statistics (for threshold selection)')
     print('='*60)
 
     att_scores_tensor = torch.stack(att_scores).float()
 
 
     all_values = att_scores_tensor.flatten().float().clamp(min=0)
-    print(f'\n【整体统计】')
-    print(f'  样本数: {att_scores_tensor.shape[0]}')
-    print(f'  层数: {att_scores_tensor.shape[1]}')
-    print(f'  每层神经元数: {att_scores_tensor.shape[2]}')
-    print(f'  差值范围: [{all_values.min().item():.6f}, {all_values.max().item():.6f}]')
+    print(f'\nOverall statistics')
+    print(f'  Samples: {att_scores_tensor.shape[0]}')
+    print(f'  Layers: {att_scores_tensor.shape[1]}')
+    print(f'  Neurons per layer: {att_scores_tensor.shape[2]}')
+    print(f'  Difference range: [{all_values.min().item():.6f}, {all_values.max().item():.6f}]')
 
     print('=== OVERALL EVALUATION START ===')
     if args.top_k > 0:
@@ -494,15 +494,15 @@ def main():
     parser.add_argument('--p_value', type=float, default=0.05)
     parser.add_argument('--add', type=str, default='')
     parser.add_argument('--top_k', type=int, default=0,
-                        help='直接取前top_k个神经元（如500），默认为0表示使用threshold模式')
+                        help='Select the top_k neurons (e.g., 500); 0 uses threshold mode')
 
-    parser.add_argument('--contrastive', action='store_true', help='使用对比方法（gold vs gold1）')
+    parser.add_argument('--contrastive', action='store_true', help='Use contrastive attribution (gold vs gold1)')
     parser.add_argument('--contrastive_method', type=str, default='direct', choices=['ig', 'direct'],
-                        help='对比方法: ig=积分梯度对比, direct=直接激活值相减')
-    parser.add_argument('--steps', type=int, default=20, help='积分梯度步数（仅对ig方法有效）')
+                        help='Contrastive method: ig=integrated gradients, direct=activation differences')
+    parser.add_argument('--steps', type=int, default=20, help='Integrated-gradient steps (only used by the ig method)')
     parser.add_argument(
         '--qwen_batch_size', type=int, default=4,
-        help='Qwen3.5积分梯度微批大小，必须能整除steps；调大可加速但会增加显存',
+        help='Qwen3.5 integrated-gradient microbatch size; must divide steps; larger values may improve speed but require more GPU memory',
     )
 
 
@@ -513,9 +513,9 @@ def main():
     )
     if requested_qwen35:
         if args.steps <= 0 or args.qwen_batch_size <= 0:
-            parser.error('--steps 和 --qwen_batch_size 必须为正整数')
+            parser.error('--steps and --qwen_batch_size must be positive integers')
         if args.steps % args.qwen_batch_size != 0:
-            parser.error('--steps 必须能被 --qwen_batch_size 整除')
+            parser.error('--steps must be divisible by --qwen_batch_size')
 
 
     args.T = strftime('%Y%m%d-%H%M')

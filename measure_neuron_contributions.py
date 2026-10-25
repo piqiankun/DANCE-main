@@ -138,26 +138,26 @@ def compute_neuron_contributions(model_name, condition, specified_neurons, num_p
 
     neurons_to_analyze = specified_neurons
 
-    print(f"\n指定分析的神经元数量: {len(neurons_to_analyze)}")
-    print(f"神经元列表: {neurons_to_analyze[:10]}{'...' if len(neurons_to_analyze) > 10 else ''}")
+    print(f"\nNumber of neurons selected for analysis: {len(neurons_to_analyze)}")
+    print(f"Neuron list: {neurons_to_analyze[:10]}{'...' if len(neurons_to_analyze) > 10 else ''}")
 
 
     n_layers = kn.n_layers()
     layer_intermediate_sizes = {}
     for layer_idx, neuron_idx in neurons_to_analyze:
         if layer_idx < 0 or layer_idx >= n_layers:
-            raise ValueError(f"层索引 {layer_idx} 超出范围 [0, {n_layers-1}]")
+            raise ValueError(f"Layer index {layer_idx} is outside the valid range [0, {n_layers-1}]")
         if layer_idx not in layer_intermediate_sizes:
             layer_intermediate_sizes[layer_idx] = kn.intermediate_size(layer_idx)
         intermediate_size = layer_intermediate_sizes[layer_idx]
         if neuron_idx < 0 or neuron_idx >= intermediate_size:
             raise ValueError(
-                f"第 {layer_idx} 层神经元索引 {neuron_idx} 超出范围 "
+                f"Layer {layer_idx} neuron index {neuron_idx} is outside the valid range "
                 f"[0, {intermediate_size-1}]"
             )
 
     print(
-        f"模型层数: {n_layers}, MLP中间维度: "
+        f"Model layers: {n_layers}, MLP intermediate dimensions: "
         f"{sorted(set(layer_intermediate_sizes.values()))}"
     )
 
@@ -169,8 +169,8 @@ def compute_neuron_contributions(model_name, condition, specified_neurons, num_p
         neurons_by_layer.setdefault(layer_idx, []).append(neuron_idx)
     if is_qwen35:
         print(
-            f"[Qwen3.5优化] 仅计算指定神经元涉及的 "
-            f"{len(neurons_by_layer)}/{n_layers} 层；跳过IG内层高频CUDA缓存清理"
+            f"[Qwen3.5 optimization] Computing only the layers containing selected neurons: "
+            f"{len(neurons_by_layer)}/{n_layers} layers; skipping frequent CUDA-cache cleanup inside the IG loop"
         )
 
 
@@ -238,7 +238,7 @@ Question: {q_add}"""
 
 
     print("\n" + "="*60)
-    print("指定神经元贡献度统计")
+    print("Selected-neuron contribution statistics")
     print("="*60)
 
 
@@ -268,9 +268,9 @@ Question: {q_add}"""
 
             results_data.append(row)
 
-            print(f"\n神经元 (Layer {layer_idx}, Neuron {neuron_idx}):")
-            print(f"  样本数: {len(contributions)}")
-            print(f"  平均贡献度: {mean_contrib:.6f}")
+            print(f"\nNeuron (Layer {layer_idx}, Neuron {neuron_idx}):")
+            print(f"  Samples: {len(contributions)}")
+            print(f"  Mean contribution: {mean_contrib:.6f}")
         else:
             row = {
                 'layer': layer_idx,
@@ -294,10 +294,10 @@ Question: {q_add}"""
     results_df['weight'] = (total_neurons - results_df['rank'] + 1) / total_neurons
 
     print("\n" + "="*60)
-    print("按重要性排序后的神经元权重")
+    print("Neuron weights ranked by importance")
     print("="*60)
     print(results_df[['layer', 'neuron', 'mean_contribution', 'rank', 'weight']].head(10).to_string(index=False))
-    print(f"...\n共 {total_neurons} 个神经元")
+    print(f"...\nTotal: {total_neurons} neurons")
 
 
     save_filename = (
@@ -314,7 +314,7 @@ Question: {q_add}"""
     ordered_cols = ['layer', 'neuron', 'mean_contribution', 'num_samples',
                     'rank', 'weight'] + sample_cols
     results_df[ordered_cols].to_csv(save_path, index=False)
-    print(f"\n完整结果（含每样本归因分数）已保存到: {save_path}")
+    print(f"\nFull results (including per-example attributions) saved to: {save_path}")
 
     print("\nDone.")
 
@@ -322,7 +322,7 @@ Question: {q_add}"""
 
 
 def main():
-    parser = argparse.ArgumentParser(description='指定神经元的贡献度分析')
+    parser = argparse.ArgumentParser(description='Contribution analysis for selected neurons')
     parser.add_argument('--condition', type=str, default='Gender_identity')
     parser.add_argument('--model_name', type=str, default='meta-llama/Llama-3.2-3B-Instruct')
     parser.add_argument('--num_probs', '-n', type=int, default=5)
@@ -332,28 +332,28 @@ def main():
     parser.add_argument('--end', type=int, default=-1)
     parser.add_argument(
         '--qwen_steps', type=int, default=20,
-        help='Qwen3.5积分梯度步数；默认20以保持原归因精度'
+        help='Qwen3.5 integrated-gradient steps (default: 20 to preserve attribution precision)'
     )
     parser.add_argument(
         '--qwen_batch_size', type=int, default=4,
-        help='Qwen3.5积分梯度微批大小，必须能整除qwen_steps'
+        help='Qwen3.5 integrated-gradient microbatch size; must divide qwen_steps'
     )
 
     global args
     args = parser.parse_args()
 
     if args.qwen_steps <= 0 or args.qwen_batch_size <= 0:
-        parser.error('--qwen_steps 和 --qwen_batch_size 必须为正整数')
+        parser.error('--qwen_steps and --qwen_batch_size must be positive integers')
     if args.qwen_steps % args.qwen_batch_size != 0:
-        parser.error('--qwen_steps 必须能被 --qwen_batch_size 整除')
+        parser.error('--qwen_steps must be divisible by --qwen_batch_size')
 
 
     specified_neurons = SPECIFIED_NEURONS
 
     if not specified_neurons:
-        raise ValueError("请在脚本顶部的 SPECIFIED_NEURONS 列表中定义要分析的神经元")
+        raise ValueError("Define neurons to analyze in SPECIFIED_NEURONS at the top of this script")
 
-    print(f"使用预定义的神经元列表，共 {len(specified_neurons)} 个神经元")
+    print(f"Using the predefined neuron list: {len(specified_neurons)} neurons")
 
     compute_neuron_contributions(
         args.model_name,

@@ -20,9 +20,9 @@ def _as_numpy(value):
 def rank_normalize(values, *, keep_zero=False):
     values = np.asarray(values, dtype=float)
     if values.ndim != 1 or not np.isfinite(values).all():
-        raise ValueError("秩归一化需要有限的一维数组")
+        raise ValueError("Rank normalization requires a finite one-dimensional array")
     if keep_zero and np.any(values < 0):
-        raise ValueError("联盟影响必须非负")
+        raise ValueError("Coalition influence must be nonnegative")
     if len(values) == 0:
         return values.copy()
     if len(values) == 1:
@@ -39,7 +39,7 @@ def candidate_pairs_from_profiles(profiles):
 
     profiles = np.asarray(profiles, dtype=float)
     if profiles.ndim != 2 or profiles.shape[1] < 2 or not np.isfinite(profiles).all():
-        raise ValueError("profiles 必须为有限 N×M 数组，M>=2")
+        raise ValueError("profiles must be a finite N-by-M array with M >= 2")
     n = len(profiles)
     graph = nx.Graph()
     graph.add_nodes_from(range(n))
@@ -59,7 +59,7 @@ def candidate_pairs_from_profiles(profiles):
     if graph.number_of_edges() == 0:
         communities = [{i} for i in range(n)]
     else:
-        warnings.warn("正文的互为一近邻图最多形成二节点配对；Louvain 无法恢复更大的连通社区。", stacklevel=2)
+        warnings.warn("The mutual 1-nearest-neighbor graph forms at most two-node pairs; Louvain cannot recover larger connected communities.", stacklevel=2)
         communities = list(nx.community.louvain_communities(graph, weight="weight", seed=0))
     communities = sorted((set(c) for c in communities), key=lambda c: min(c))
     pairs = sorted(pair for c in communities for pair in combinations(sorted(c), 2))
@@ -69,15 +69,15 @@ def candidate_pairs_from_profiles(profiles):
 def verify_interactions(candidate_pairs, ratios, evaluate):
     ratios = np.asarray(list(ratios), dtype=float)
     if ratios.ndim != 1 or len(ratios) == 0 or not np.isfinite(ratios).all() or np.any(ratios <= 0):
-        raise ValueError("ratios 必须包含有限的正激活倍率")
+        raise ValueError("ratios must contain finite positive activation multipliers")
     pairs = sorted({tuple(sorted(pair)) for pair in candidate_pairs})
     if any(len(pair) != 2 or pair[0] == pair[1] for pair in pairs):
-        raise ValueError("候选对必须包含两个不同的神经元")
+        raise ValueError("Each candidate pair must contain two distinct neurons")
 
     def score(interventions):
         value = float(evaluate(interventions))
         if not np.isfinite(value):
-            raise ValueError("evaluate 返回了非有限分数")
+            raise ValueError("evaluate returned a non-finite score")
         return value
 
     baseline = score({})
@@ -134,25 +134,25 @@ class CoalitionGrowing:
                  raw_features, device="cpu"):
         self.raw = np.array(_as_numpy(raw_features), dtype=float, copy=True)
         if self.raw.shape != (num_neurons, 3) or not np.isfinite(self.raw).all():
-            raise ValueError("raw_features 必须为有限 N×3 数组")
+            raise ValueError("raw_features must be a finite N-by-3 array")
         self.N = num_neurons
         self.device = device
         self.node_features = np.column_stack([rank_normalize(self.raw[:, k]) for k in range(3)])
         self.node_contributions = self.node_features.mean(axis=1)
         edges, types = _as_numpy(edge_index), _as_numpy(edge_type)
         if edges.ndim != 2 or edges.shape[0] != 2 or types.shape != (edges.shape[1],):
-            raise ValueError("edge_index 应为 [2,E]，edge_type 应为 [E]")
+            raise ValueError("edge_index must have shape [2, E] and edge_type must have shape [E]")
         if not np.isfinite(edges).all() or np.any(edges != np.floor(edges)):
-            raise ValueError("边索引必须为整数")
+            raise ValueError("Edge indices must be integers")
         if np.any(edges < 0) or np.any(edges >= self.N) or not np.isin(types, [0, 1]).all():
-            raise ValueError("边索引越界或边类型无效")
+            raise ValueError("Edge index out of bounds or invalid edge type")
         canonical = {}
         for (i, j), t in zip(edges.T.astype(int), types.astype(int)):
             if i == j:
-                raise ValueError("有符号图不允许自环")
+                raise ValueError("Self-loops are not allowed in the signed graph")
             pair = tuple(sorted((int(i), int(j))))
             if pair in canonical and canonical[pair] != t:
-                raise ValueError(f"同一边不能同时为协同和抑制: {pair}")
+                raise ValueError(f"An edge cannot be both synergistic and suppressive: {pair}")
             canonical[pair] = int(t)
         pairs = sorted(canonical)
         self.edge_index = np.asarray(pairs, dtype=int).reshape(-1, 2).T
@@ -275,9 +275,9 @@ class CoalitionGrowing:
 
     def compute_neuron_weights(self, gamma):
         if not self.has_run_:
-            raise RuntimeError("请先执行 run()")
+            raise RuntimeError("Call run() first")
         if not np.isfinite(gamma) or gamma <= 0:
-            raise ValueError("gamma 必须为有限正数")
+            raise ValueError("gamma must be finite and positive")
         influence = np.zeros((self.N, 2))
         for coalition in self.coalitions:
             influence[:, coalition.type] += self.competition_[:, coalition.id] * coalition.score
@@ -300,23 +300,23 @@ class CoalitionGraphOptimizer:
         frames = []
         for label, frame in zip(("bias", "general", "crosslang"), (bias_df, general_df, crosslang_df)):
             if not {"layer", "neuron", "weight"} <= set(frame.columns):
-                raise ValueError(f"{label} 缺少 layer/neuron/weight 列")
+                raise ValueError(f"{label} is missing layer/neuron/weight columns")
             ids = frame[["layer", "neuron"]].to_numpy(dtype=float)
             if not np.isfinite(ids).all() or np.any(ids < 0) or np.any(ids != np.floor(ids)):
-                raise ValueError(f"{label} 的神经元坐标必须是非负整数")
+                raise ValueError(f"{label} neuron coordinates must be nonnegative integers")
             keys = list(map(tuple, ids.astype(int)))
             if len(set(keys)) != len(keys):
-                raise ValueError(f"{label} 存在重复神经元")
+                raise ValueError(f"{label} contains duplicate neurons")
             values = frame["weight"].to_numpy(dtype=float)
             if not np.isfinite(values).all():
-                raise ValueError(f"{label} 存在非有限权重")
+                raise ValueError(f"{label} contains non-finite weights")
             frames.append(dict(zip(keys, values)))
         self.neurons = list(frames[0])
         if not self.neurons:
-            raise ValueError("共享神经元集合不能为空")
+            raise ValueError("The shared-neuron set must not be empty")
         for feature in frames[1:]:
             if set(self.neurons) - feature.keys():
-                raise ValueError("通用/跨语言特征缺少共享神经元，不能用零隐式填补")
+                raise ValueError("General/cross-language features are missing shared neurons; implicit zero-filling is not allowed")
         self.num_neurons = len(self.neurons)
         self.neuron_to_idx = {neuron: i for i, neuron in enumerate(self.neurons)}
         self.idx_to_neuron = dict(enumerate(self.neurons))
@@ -326,10 +326,10 @@ class CoalitionGraphOptimizer:
             for pair in pairs:
                 coords = np.asarray(pair, dtype=float)
                 if coords.shape != (4,) or not np.isfinite(coords).all() or np.any(coords != np.floor(coords)):
-                    raise ValueError("神经元对必须为四个整数 layer_A,neuron_A,layer_B,neuron_B")
+                    raise ValueError("Each neuron pair must contain four integers: layer_A, neuron_A, layer_B, neuron_B")
                 a, b = tuple(coords[:2].astype(int)), tuple(coords[2:].astype(int))
                 if a not in self.neuron_to_idx or b not in self.neuron_to_idx:
-                    raise ValueError(f"关系包含非共享神经元: {a}, {b}")
+                    raise ValueError(f"A relation contains non-shared neurons: {a}, {b}")
                 edges.append((self.neuron_to_idx[a], self.neuron_to_idx[b]))
                 types.append(t)
         self.edge_index = np.asarray(edges, dtype=int).reshape(-1, 2).T
@@ -341,7 +341,7 @@ class CoalitionGraphOptimizer:
                                   profiles, ratios, evaluate):
         self.build_graph(bias_df, general_df, crosslang_df, [], [])
         if len(profiles) != self.num_neurons:
-            raise ValueError("profiles 行数必须等于共享神经元数")
+            raise ValueError("The number of profile rows must equal the shared-neuron count")
         pairs, self.similarity_graph_, self.communities_ = candidate_pairs_from_profiles(profiles)
         self.candidate_pairs_ = pairs
         self.edge_index, self.edge_type, self.interactions_ = verify_interactions(pairs, ratios, evaluate)
@@ -378,10 +378,10 @@ def load_data(base_path):
     pairs = pd.read_csv(base / "stable_neuron_pairs.csv")
     required = ["layer_A", "neuron_A", "layer_B", "neuron_B", "relationship"]
     if not set(required) <= set(pairs):
-        raise ValueError(f"关系表必须包含 {required}")
+        raise ValueError(f"The relation table must contain {required}")
     labels = pairs["relationship"].astype(str).str.strip().str.lower()
     if not labels.isin(["synergistic", "suppressive"]).all():
-        raise ValueError("relationship 只能为 synergistic 或 suppressive；未知值不能默认归为抑制")
+        raise ValueError("relationship must be synergistic or suppressive; unknown values cannot default to suppressive")
     syn = list(pairs.loc[labels == "synergistic", required[:4]].itertuples(index=False, name=None))
     sup = list(pairs.loc[labels == "suppressive", required[:4]].itertuples(index=False, name=None))
     return *frames, syn, sup
@@ -389,12 +389,12 @@ def load_data(base_path):
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--data-dir", required=True, help="原始四个 CSV 所在目录")
-    parser.add_argument("--gamma", type=float, required=True, help="正文全局缩放系数")
-    parser.add_argument("--output", type=Path, default=Path("results/神经元增强权重-section35.csv"))
+    parser.add_argument("--data-dir", required=True, help="Directory containing the four input CSV files")
+    parser.add_argument("--gamma", type=float, required=True, help="Global enhancement scaling factor")
+    parser.add_argument("--output", type=Path, default=Path("results/neuron_coalition_weights-section35.csv"))
     args = parser.parse_args(argv)
     if not np.isfinite(args.gamma) or args.gamma <= 0:
-        parser.error("--gamma 必须为有限正数")
+        parser.error("--gamma must be finite and positive")
     optimizer = CoalitionGraphOptimizer().build_graph(*load_data(args.data_dir))
     weights = optimizer.optimize(gamma=args.gamma)
     engine = optimizer.coalition_growing
@@ -425,9 +425,9 @@ def main(argv=None):
                                           score=c.score, participation=c.member_strength,
                                           growth_trace=c.growth_trace))
     args.output.with_suffix(".json").write_text(json.dumps(details, ensure_ascii=False, indent=2), encoding="utf-8")
-    print(f"神经元={optimizer.num_neurons}, 去重边={engine.edge_index.shape[1]}, 联盟={len(engine.coalitions)}")
-    print(f"结果：{args.output}; 解释数据：{args.output.with_suffix('.json')}")
-    print("输入边来自已有 CSV，未重新执行多比例关系验证。")
+    print(f"Neurons={optimizer.num_neurons}, Unique edges={engine.edge_index.shape[1]}, Coalitions={len(engine.coalitions)}")
+    print(f"Results: {args.output}; Explanation data: {args.output.with_suffix('.json')}")
+    print("Input edges were loaded from existing CSV files; interaction verification across enhancement ratios was not rerun.")
     return result, optimizer
 
 

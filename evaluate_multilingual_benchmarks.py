@@ -157,7 +157,7 @@ def evaluate(all_cat, all_):
 
     if 'kn' in args.neurons and not neurons:
         raise RuntimeError(
-            "当前没有启用任何神经元列表；请在 evaluate_multilingual_benchmarks.py 中设置 neurons=[...]"
+            "No neuron list is enabled; set neurons=[...] in evaluate_multilingual_benchmarks.py"
         )
 
     if 'kn' in args.neurons:
@@ -169,16 +169,16 @@ def evaluate(all_cat, all_):
         for layer_idx, neuron_idx in neurons:
             if layer_idx < 0 or layer_idx >= n_layers:
                 raise ValueError(
-                    f"神经元坐标 ({layer_idx}, {neuron_idx}) 的层索引超出模型范围 "
-                    f"[0, {n_layers - 1}]；请确认当前列表属于 {args.model_name}"
+                    f"Neuron coordinates ({layer_idx}, {neuron_idx}) have a layer index outside the model range "
+                    f"[0, {n_layers - 1}]; verify that the current list matches {args.model_name}"
                 )
             if layer_idx not in intermediate_sizes:
                 intermediate_sizes[layer_idx] = perspectiveModel.kn.intermediate_size(layer_idx)
             width = intermediate_sizes[layer_idx]
             if neuron_idx < 0 or neuron_idx >= width:
                 raise ValueError(
-                    f"神经元坐标 ({layer_idx}, {neuron_idx}) 超出第 {layer_idx} 层 "
-                    f"MLP宽度 [0, {width - 1}]；请确认当前列表属于 {args.model_name}"
+                    f"Neuron coordinates ({layer_idx}, {neuron_idx}) are outside layer {layer_idx} "
+                    f"MLP width [0, {width - 1}]; verify that the current list matches {args.model_name}"
                 )
         print(
             f"Validated {len(neurons)} active neurons for {args.model_name}: "
@@ -205,7 +205,7 @@ def evaluate(all_cat, all_):
             if isinstance(module, Patch)
         ]
         if not active_patches:
-            raise RuntimeError("神经元增强未成功注册任何 Patch")
+            raise RuntimeError("No neuron-enhancement patches were registered")
         print(
             f"Registered {len(active_patches)} neuron-enhancement patches "
             f"across {len(modified_layers)} layers"
@@ -693,9 +693,9 @@ Context: {context}
 
 
                 if cll_stereo_total > cll_anti_total:
-                    bias_label = "刻板偏向"
+                    bias_label = "Stereotypical preference"
                 else:
-                    bias_label = "反刻板偏向"
+                    bias_label = "Anti-stereotypical preference"
 
                 table.add_row([context_display, cll_stereo_total, cll_anti_total, bias_label, str(stereo_options), str(anti_options)])
 
@@ -1146,7 +1146,7 @@ Context: {context}
         )
         print(f"Neuron Patch forward calls during evaluation: {patch_forward_calls}")
         if patch_forward_calls == 0:
-            raise RuntimeError("神经元 Patch 已注册，但评测期间从未执行")
+            raise RuntimeError("Neuron patches were registered but never executed during evaluation")
         print('Unpatching model...')
         unpatch_ff_layers(
             model=perspectiveModel.kn.model,
