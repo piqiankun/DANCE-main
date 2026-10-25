@@ -1,31 +1,6 @@
 # DANCE
 
-DANCE is a research codebase for identifying and analyzing multilingual knowledge-bias neurons in large language models. The repository supports bias-neuron discovery, cross-language comparison, neuron interaction analysis, adaptive coalition weighting, and downstream benchmark evaluation.
-
-This copy is prepared for anonymous peer review. It contains no author metadata, embedded credentials, or machine-specific paths.
-
-## Repository layout
-
-| Path | Purpose |
-| --- | --- |
-| `discover_bias_neurons.py` | Compute neuron attribution scores from bias datasets. |
-| `analyze_bias_neurons.py` | Convert attribution scores into neuron-level summaries. |
-| `measure_bias_importance.py` | Measure the bias contribution of selected neurons. |
-| `measure_general_importance.py` | Measure selected-neuron importance on OpenBookQA. |
-| `prepare_cross_language_data.py` | Generate distractor options for cross-language examples. |
-| `extract_cross_language_activations.py` | Extract last-token activations from cross-language samples. |
-| `measure_cross_language_importance.py` | Evaluate cross-language effects through neuron ablation. |
-| `measure_neuron_contributions.py` | Estimate per-neuron contribution scores. |
-| `identify_neuron_modules.py` | Build functional neuron modules from contribution scores. |
-| `analyze_neuron_interactions.py` | Measure pairwise synergy and inhibition. |
-| `analyze_interaction_stability.py` | Compare interaction estimates across intervention strengths. |
-| `optimize_neuron_coalitions.py` | Compute adaptive weights for neuron coalitions. |
-| `evaluate_bias_benchmarks.py` | Run bias-focused benchmark evaluation. |
-| `evaluate_multilingual_benchmarks.py` | Run multilingual and general benchmark evaluation. |
-| `kn_code/` | Model loading, neuron patching, and analysis utilities. |
-| `prompt_instructions/` | Prompt templates used by evaluation scripts. |
-| `data/` | Local input datasets; data files are not committed by default. |
-| `results/` | Generated experiment outputs; outputs are not committed by default. |
+**DANCE** (Dynamic and Adaptive Neuron Coalition Enhancement) is a graph-guided framework for joint debiasing across high- and low-resource languages. It identifies shared bias-knowledge neurons and profiles their debiasing contributions, general-knowledge sensitivity, and cross-lingual functionality. A signed graph captures synergistic and suppressive interactions, enabling a coalition optimizer to jointly determine neuron-specific enhancement weights. These weights are fixed for each model and language pair and applied to both languages during inference, with model parameters frozen. DANCE aims to reduce social bias while preserving general capabilities.
 
 ## Environment
 
@@ -160,8 +135,3 @@ CUDA_VISIBLE_DEVICES=0 python evaluate_multilingual_benchmarks.py \
   --all
 ```
 
-Use `python <script>.py --help` for the complete set of experiment-specific arguments.
-
-## Reproducibility and anonymity
-
-Runtime artifacts, editor settings, caches, local datasets, and credentials are excluded through `.gitignore`. Before creating an anonymous submission link, inspect the complete Git history as well as the current tree; removing identifying content from the latest revision does not remove it from earlier commits.
